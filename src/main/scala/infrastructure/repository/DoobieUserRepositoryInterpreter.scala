@@ -17,25 +17,25 @@ private object UserSQL {
     Meta[String].imap(decode[Role](_).leftMap(throw _).merge)(_.asJson.toString)
 
   def insert(user: User): Update0 = sql"""
-    INSERT INTO USERS (USER_NAME, FIRST_NAME, LAST_NAME, EMAIL, HASH, PHONE, ROLE)
-    VALUES (${user.userName}, ${user.firstName}, ${user.lastName}, ${user.email}, ${user.hash}, ${user.phone}, ${user.role})
+    INSERT INTO USERS (USER_NAME, FIRST_NAME, LAST_NAME, EMAIL, HASH, ROLE)
+    VALUES (${user.userName}, ${user.firstName}, ${user.lastName}, ${user.email}, ${user.hash}, ${user.role})
   """.update
 
   def update(user: User, id: Long): Update0 = sql"""
     UPDATE USERS
     SET FIRST_NAME = ${user.firstName}, LAST_NAME = ${user.lastName},
-        EMAIL = ${user.email}, HASH = ${user.hash}, PHONE = ${user.phone}, ROLE = ${user.role}
+        EMAIL = ${user.email}, HASH = ${user.hash}, ROLE = ${user.role}
     WHERE ID = $id
   """.update
 
   def select(userId: Long): Query0[User] = sql"""
-    SELECT USER_NAME, FIRST_NAME, LAST_NAME, EMAIL, HASH, PHONE, ID, ROLE
+    SELECT USER_NAME, FIRST_NAME, LAST_NAME, EMAIL, HASH, ID, ROLE
     FROM USERS
     WHERE ID = $userId
   """.query
 
   def byUserName(userName: String): Query0[User] = sql"""
-    SELECT USER_NAME, FIRST_NAME, LAST_NAME, EMAIL, HASH, PHONE, ID, ROLE
+    SELECT USER_NAME, FIRST_NAME, LAST_NAME, EMAIL, HASH, ID, ROLE
     FROM USERS
     WHERE USER_NAME = $userName
   """.query[User]
@@ -45,7 +45,7 @@ private object UserSQL {
   """.update
 
   val selectAll: Query0[User] = sql"""
-    SELECT USER_NAME, FIRST_NAME, LAST_NAME, EMAIL, HASH, PHONE, ID, ROLE
+    SELECT USER_NAME, FIRST_NAME, LAST_NAME, EMAIL, HASH, ID, ROLE
     FROM USERS
   """.query
 }

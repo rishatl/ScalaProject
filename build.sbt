@@ -38,6 +38,7 @@ lazy val root = (project in file("."))
       "io.circe" %% "circe-config" % CirceConfigVersion,
       "ch.qos.logback" % "logback-classic" % LogbackVersion,
       "org.postgresql" % "postgresql" % PotgreSQLVersion,
+      "org.flywaydb" % "flyway-core" % FlywayVersion,
       // Authentication dependencies
       "io.github.jmcardon" %% "tsec-common" % TsecVersion,
       "io.github.jmcardon" %% "tsec-password" % TsecVersion,

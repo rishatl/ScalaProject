@@ -14,8 +14,7 @@ final case class SignupRequest(
                                 lastName: String,
                                 email: String,
                                 password: String,
-                                phone: String,
-                                role: Role,
+                                role: Role
                               ) {
   def asUser[A](hashedPassword: PasswordHash[A]): User = User(
     userName,
@@ -23,7 +22,6 @@ final case class SignupRequest(
     lastName,
     email,
     hashedPassword.toString,
-    phone,
     role = role,
   )
 }

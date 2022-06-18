@@ -1,7 +1,9 @@
 package config
 
-import cats.effect.{Async, Blocker, ContextShift, Resource}
+import cats.syntax.functor._
+import cats.effect.{Async, Blocker, ContextShift, Resource, Sync}
 import doobie.hikari.HikariTransactor
+import org.flywaydb.core.Flyway
 
 import scala.concurrent.ExecutionContext
 
@@ -26,14 +28,14 @@ object DatabaseConfig {
   /**
    * Runs the flyway migrations against the target database
    */
-//  def initializeDb[F[_]](cfg: DatabaseConfig)(implicit S: Sync[F]): F[Unit] =
-//    S.delay {
-//      val fw: Flyway =
-//        Flyway
-//          .configure()
-//          .dataSource(cfg.url, cfg.user, cfg.password)
-//          .load()
-//      fw.migrate()
-//    }.as(())
+  def initializeDb[F[_]](cfg: DatabaseConfig)(implicit S: Sync[F]): F[Unit] =
+    S.delay {
+      val fw: Flyway =
+        Flyway
+          .configure()
+          .dataSource(cfg.url, cfg.user, cfg.password)
+          .load()
+      fw.migrate()
+    }.as(())
 }
 
