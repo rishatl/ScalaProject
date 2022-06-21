@@ -12,6 +12,7 @@ import org.http4s.{EntityDecoder, HttpRoutes}
 import domain._
 import domain.users._
 import domain.authentification._
+
 import tsec.common.Verified
 import tsec.jwt.algorithms.JWTMacAlgo
 import tsec.passwordhashers.{PasswordHash, PasswordHasher}
@@ -33,7 +34,7 @@ class UserEndpoints[F[_] : Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
                              cryptService: PasswordHasher[F, A],
                              auth: Authenticator[F, Long, User, AugmentedJWT[Auth, Long]],
                            ): HttpRoutes[F] =
-    HttpRoutes.of[F] { case req@POST -> Root / "login" =>
+    HttpRoutes.of[F] { case req @ POST -> Root / "login" =>
       val action = for {
         login <- EitherT.liftF(req.as[LoginRequest])
         name = login.userName
@@ -51,17 +52,16 @@ class UserEndpoints[F[_] : Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
       } yield (user, token)
 
       action.value.flatMap {
-        case Right((user, token)) => Ok(user.asJson).map(auth.embed(_, token))
+        case Right((user, token)) => Ok(user.toUserWithoutHash.asJson).map(auth.embed(_, token))
         case Left(UserAuthenticationFailedError(name)) =>
           BadRequest(s"Authentication failed for user $name")
       }
     }
 
-  private def signupEndpoint(
-                              userService: UserService[F],
+  private def signupEndpoint(userService: UserService[F],
                               crypt: PasswordHasher[F, A],
                             ): HttpRoutes[F] =
-    HttpRoutes.of[F] { case req@POST -> Root =>
+    HttpRoutes.of[F] { case req @ POST -> Root =>
       val action = for {
         signup <- req.as[SignupRequest]
         hash <- crypt.hashpw(signup.password)
@@ -70,18 +70,18 @@ class UserEndpoints[F[_] : Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
       } yield result
 
       action.flatMap {
-        case Right(saved) => Ok(saved.asJson)
+        case Right(saved) => Ok(saved.toUserWithoutHash.asJson)
         case Left(UserAlreadyExistsError(existing)) =>
           Conflict(s"The user with user name ${existing.userName} already exists")
       }
     }
 
   private def updateEndpoint(userService: UserService[F]): AuthEndpoint[F, Auth] = {
-    case req@PUT -> Root / name asAuthed _ =>
+    case req @ POST -> Root / name asAuthed _ =>
       val action = for {
         user <- req.request.as[User]
-        updated = user.copy(userName = name)
-        result <- userService.update(updated).value
+        newUser = user.copy(userName = name)
+        result <- userService.update(newUser).value
       } yield result
 
       action.flatMap {
@@ -115,11 +115,9 @@ class UserEndpoints[F[_] : Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
       } yield resp
   }
 
-  def endpoints(
-                 userService: UserService[F],
+  def endpoints(userService: UserService[F],
                  cryptService: PasswordHasher[F, A],
-                 auth: SecuredRequestHandler[F, Long, User, AugmentedJWT[Auth, Long]],
-               ): HttpRoutes[F] = {
+                 auth: SecuredRequestHandler[F, Long, User, AugmentedJWT[Auth, Long]]): HttpRoutes[F] = {
     val authEndpoints: AuthService[F, Auth] =
       Auth.adminOnly {
         updateEndpoint(userService)

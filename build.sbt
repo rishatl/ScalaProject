@@ -36,6 +36,7 @@ lazy val root = (project in file("."))
       "io.circe" %% "circe-generic-extras" % CirceGenericExVersion,
       "io.circe" %% "circe-parser" % CirceVersion,
       "io.circe" %% "circe-config" % CirceConfigVersion,
+      "com.beachape" %% "enumeratum-circe" % EnumeratumCirceVersion,
       "ch.qos.logback" % "logback-classic" % LogbackVersion,
       "org.postgresql" % "postgresql" % PotgreSQLVersion,
       "org.flywaydb" % "flyway-core" % FlywayVersion,

@@ -15,9 +15,7 @@ class UserService[F[_]](userRepo: UserRepositoryAlgebra[F], validation: UserVali
   def getUser(userId: Long)(implicit F: Functor[F]): EitherT[F, UserNotFoundError.type, User] =
     userRepo.get(userId).toRight(UserNotFoundError)
 
-  def getUserByName(
-                     userName: String,
-                   )(implicit F: Functor[F]): EitherT[F, UserNotFoundError.type, User] =
+  def getUserByName(userName: String)(implicit F: Functor[F]): EitherT[F, UserNotFoundError.type, User] =
     userRepo.findByUserName(userName).toRight(UserNotFoundError)
 
   def deleteUser(userId: Long)(implicit F: Functor[F]): F[Unit] =

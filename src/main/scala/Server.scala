@@ -1,14 +1,17 @@
-import cats.effect.{Blocker, ConcurrentEffect, ContextShift, ExitCode, IO, IOApp, Resource, Timer}
-import config.{MeetingConfig, DatabaseConfig}
-import domain.authentification.Auth
-import domain.users.{UserService, UserValidationInterpreter}
+import cats.effect._
+import config._
 import doobie.util.ExecutionContexts
-import infrastructure.endpoint.UserEndpoints
-import infrastructure.repository.{DoobieAuthRepositoryInterpreter, DoobieUserRepositoryInterpreter}
+import infrastructure.endpoint._
+import infrastructure.repository._
 import io.circe.config.parser
 import org.http4s.implicits.http4sKleisliResponseSyntaxOptionT
 import org.http4s.server.{Router, Server => H4Server}
 import org.http4s.server.blaze.BlazeServerBuilder
+
+import domain.authentification.Auth
+import domain.cars.CarService
+import domain.users._
+
 import tsec.authentication.SecuredRequestHandler
 import tsec.mac.jca.HMACSHA256
 import tsec.passwordhashers.jca.BCrypt
@@ -16,28 +19,24 @@ import tsec.passwordhashers.jca.BCrypt
 object Server extends IOApp {
   def createServer[F[_]: ContextShift: ConcurrentEffect: Timer]: Resource[F, H4Server[F]] =
     for {
-      conf <- Resource.eval(parser.decodePathF[F, MeetingConfig]("concerts"))
+      conf <- Resource.eval(parser.decodePathF[F, MeetingConfig]("manufactories"))
       serverEc <- ExecutionContexts.cachedThreadPool[F]
       connEc <- ExecutionContexts.fixedThreadPool[F](conf.db.connections.poolSize)
       txnEc <- ExecutionContexts.cachedThreadPool[F]
       xa <- DatabaseConfig.dbTransactor(conf.db, connEc, Blocker.liftExecutionContext(txnEc))
       key <- Resource.eval(HMACSHA256.generateKey[F])
       authRepo = DoobieAuthRepositoryInterpreter[F, HMACSHA256](key, xa)
-//      meetingRepo = DoobieMeetingRepositoryInterpreter[F](xa)
-//      teamRepo = DoobieOrderRepositoryInterpreter[F](xa)
+      carRepo = DoobieCarRepositoryInterpreter[F](xa)
       userRepo = DoobieUserRepositoryInterpreter[F](xa)
-//      meetingValidation = MeetingValidationInterpreter[F](meetingRepo)
-//      meetingService = MeetingService[F](meetingRepo, meetingValidation)
+      carService = CarService[F](carRepo)
       userValidation = UserValidationInterpreter[F](userRepo)
-//      teamService = TeamService[F](teamRepo)
       userService = UserService[F](userRepo, userValidation)
       authenticator = Auth.jwtAuthenticator[F, HMACSHA256](key, authRepo, userRepo)
       routeAuth = SecuredRequestHandler(authenticator)
       httpApp = Router(
         "/users" -> UserEndpoints
           .endpoints[F, BCrypt, HMACSHA256](userService, BCrypt.syncPasswordHasher[F], routeAuth),
-//        "/meetings" -> MeetingEndpoints.endpoints[F, HMACSHA256](meetingService, routeAuth),
-//        "/teams" -> TeamEndpoints.endpoints[F, HMACSHA256](teamService, routeAuth),
+        "/cars" -> CarEndpoints.endpoints[F, HMACSHA256](carService, routeAuth),
       ).orNotFound
       _ <- Resource.eval(DatabaseConfig.initializeDb(conf.db))
       server <- BlazeServerBuilder[F](serverEc)

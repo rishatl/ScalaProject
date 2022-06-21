@@ -33,17 +33,17 @@ private object AuthSQL {
     sql"DELETE FROM JWT WHERE ID = $id".update
 
   def select(id: SecureRandomId): Query0[(String, Long, Instant, Option[Instant])] =
-    sql"SELECT JWT, IDENTITY, EXPIRY, LAST_TOUCHED FROM JWT WHERE ID = $id"
-      .query[(String, Long, Instant, Option[Instant])]
+    sql"""
+    SELECT JWT, IDENTITY, EXPIRY, LAST_TOUCHED
+    FROM JWT
+    WHERE ID = $id
+      """.query[(String, Long, Instant, Option[Instant])]
 }
 
-class DoobieAuthRepositoryInterpreter[F[_] : Bracket[*[_], Throwable], A](
-                                                                           val key: MacSigningKey[A],
-                                                                           val xa: Transactor[F],
-                                                                         )(implicit
-                                                                           hs: JWSSerializer[JWSMacHeader[A]],
-                                                                           s: JWSMacCV[MacErrorM, A],
-                                                                         ) extends BackingStore[F, SecureRandomId, AugmentedJWT[A, Long]] {
+class DoobieAuthRepositoryInterpreter[F[_] : Bracket[*[_], Throwable], A](val key: MacSigningKey[A],
+                                                                           val xa: Transactor[F])
+                                                                         (implicit hs: JWSSerializer[JWSMacHeader[A]],
+                                                                           s: JWSMacCV[MacErrorM, A]) extends BackingStore[F, SecureRandomId, AugmentedJWT[A, Long]] {
   override def put(jwt: AugmentedJWT[A, Long]): F[AugmentedJWT[A, Long]] =
     AuthSQL.insert(jwt).run.transact(xa).as(jwt)
 

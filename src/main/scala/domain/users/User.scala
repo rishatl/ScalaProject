@@ -7,8 +7,21 @@ case class User(
   userName: String,
   firstName: String,
   lastName: String,
-  email: String,
+  phone: String,
   hash: String,
+  id: Option[Long] = None,
+  role: Role
+){
+  def toUserWithoutHash: UserWithoutHash = {
+    UserWithoutHash(userName, firstName, lastName, phone, id, role)
+  }
+}
+
+case class UserWithoutHash(
+  userName: String,
+  firstName: String,
+  lastName: String,
+  phone: String,
   id: Option[Long] = None,
   role: Role,
 )
