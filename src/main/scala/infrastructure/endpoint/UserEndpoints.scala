@@ -52,15 +52,14 @@ class UserEndpoints[F[_] : Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
       } yield (user, token)
 
       action.value.flatMap {
-        case Right((user, token)) => Ok(user.toUserWithoutHash.asJson).map(auth.embed(_, token))
+        case Right((user, token)) => Ok(user.toUserDto.asJson).map(auth.embed(_, token))
         case Left(UserAuthenticationFailedError(name)) =>
           BadRequest(s"Authentication failed for user $name")
       }
     }
 
   private def signupEndpoint(userService: UserService[F],
-                              crypt: PasswordHasher[F, A],
-                            ): HttpRoutes[F] =
+                              crypt: PasswordHasher[F, A]): HttpRoutes[F] =
     HttpRoutes.of[F] { case req @ POST -> Root =>
       val action = for {
         signup <- req.as[SignupRequest]
@@ -70,7 +69,7 @@ class UserEndpoints[F[_] : Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
       } yield result
 
       action.flatMap {
-        case Right(saved) => Ok(saved.toUserWithoutHash.asJson)
+        case Right(saved) => Ok(saved.toUserDto.asJson)
         case Left(UserAlreadyExistsError(existing)) =>
           Conflict(s"The user with user name ${existing.userName} already exists")
       }
@@ -95,7 +94,7 @@ class UserEndpoints[F[_] : Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
     ) asAuthed _ =>
       for {
         retrieved <- userService.list(pageSize.getOrElse(10), offset.getOrElse(0))
-        resp <- Ok(retrieved.asJson)
+        resp <- Ok(retrieved.map(element => element.toUserDto).asJson)
       } yield resp
   }
 

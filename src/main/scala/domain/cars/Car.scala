@@ -7,7 +7,7 @@ case class Car(
   id: Option[Long] = None
 )
 
-case class CarWithoutOwnerId(
+case class CarDto(
   model: String,
   carNumber: String,
   id: Option[Long] = None

@@ -8,5 +8,5 @@ case object ManufactoryStatus extends Enum[ManufactoryStatus] with CirceEnum[Man
   case object Available extends ManufactoryStatus
   case object NotAvailable extends ManufactoryStatus
 
-  val values = findValues
+  val values: IndexedSeq[ManufactoryStatus] = findValues
 }

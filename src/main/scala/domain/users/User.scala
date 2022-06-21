@@ -12,12 +12,12 @@ case class User(
   id: Option[Long] = None,
   role: Role
 ){
-  def toUserWithoutHash: UserWithoutHash = {
-    UserWithoutHash(userName, firstName, lastName, phone, id, role)
+  def toUserDto: UserDto = {
+    UserDto(userName, firstName, lastName, phone, id, role)
   }
 }
 
-case class UserWithoutHash(
+case class UserDto(
   userName: String,
   firstName: String,
   lastName: String,

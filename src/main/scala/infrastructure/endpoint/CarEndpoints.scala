@@ -20,13 +20,13 @@ class CarEndpoints[F[_] : Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
 
   object NameMatcher extends OptionalMultiQueryParamDecoderMatcher[String]("carNumber")
 
-  implicit val carWithoutOwnerIdDecoder: EntityDecoder[F, CarWithoutOwnerId] = jsonOf[F, CarWithoutOwnerId]
+  implicit val carDtoDecoder: EntityDecoder[F, CarDto] = jsonOf[F, CarDto]
   implicit val carDecoder: EntityDecoder[F, Car] = jsonOf[F, Car]
 
   private def createCarEndpoint(carService: CarService[F]): AuthEndpoint[F, Auth] = {
     case req @ POST -> Root asAuthed user =>
       val action = for {
-        reqCar <- req.request.as[CarWithoutOwnerId]
+        reqCar <- req.request.as[CarDto]
         car <- reqCar.asCar(user.id.get).pure[F]
         result <- carService.create(car).value
       } yield result
