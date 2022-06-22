@@ -10,11 +10,10 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.{EntityDecoder, HttpRoutes}
 import tsec.authentication._
 import tsec.jwt.algorithms._
-
 import domain.authentification.Auth
 import domain.cars._
-import domain.users.User
-import domain.{CarAlreadyExistsError, CarNotFoundError}
+import domain.users.{User, UserService}
+import domain.{CarAlreadyExistsError, CarNotFoundError, UserNotFoundError}
 
 class CarEndpoints[F[_] : Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
 
@@ -24,7 +23,7 @@ class CarEndpoints[F[_] : Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
   implicit val carDecoder: EntityDecoder[F, Car] = jsonOf[F, Car]
 
   private def createCarEndpoint(carService: CarService[F]): AuthEndpoint[F, Auth] = {
-    case req @ POST -> Root asAuthed user =>
+    case req@POST -> Root asAuthed user =>
       val action = for {
         reqCar <- req.request.as[CarDto]
         car <- reqCar.asCar(user.id.get).pure[F]
@@ -40,7 +39,7 @@ class CarEndpoints[F[_] : Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
   }
 
   private def updateCarEndpoint(carService: CarService[F]): AuthEndpoint[F, Auth] = {
-    case req @ POST -> Root / LongVar(_) asAuthed _ =>
+    case req@POST -> Root / LongVar(_) asAuthed _ =>
       val action = for {
         car <- req.request.as[Car]
         result <- carService.update(car).value
@@ -70,13 +69,27 @@ class CarEndpoints[F[_] : Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
 
   private def findCarByCarNumberEndpoint(carService: CarService[F]): AuthEndpoint[F, Auth] = {
     case GET -> Root / "findByCarNumber" :? NameMatcher(Valid(carNumber)) asAuthed _ =>
-        carService.findCarByCarNumber(carNumber.head).value.flatMap {
+      carService.findCarByCarNumber(carNumber.head).value.flatMap {
         case Right(found) => Ok(found.asJson)
         case Left(CarNotFoundError) => NotFound("The car was not found")
       }
   }
 
+  private def findOwnerByCarId(carService: CarService[F], userService: UserService[F]): AuthEndpoint[F, Auth] = {
+    case GET -> Root / "findOwnerByCarId" / LongVar(id) asAuthed _ =>
+      carService.get(id).value.flatMap {
+      case Right(found) => {
+        userService.getUser(found.ownerId).value.flatMap {
+          case Right(found) => Ok(found.asJson)
+          case Left(UserNotFoundError) => NotFound("The user was not found")
+        }
+      }
+      case Left(CarNotFoundError) => NotFound("The car was not found")
+    }
+  }
+
   def endpoints(carService: CarService[F],
+                userService: UserService[F],
                 auth: SecuredRequestHandler[F, Long, User, AugmentedJWT[Auth, Long]]): HttpRoutes[F] = {
     val authEndpoints: AuthService[F, Auth] = {
       val allRoles =
@@ -86,6 +99,7 @@ class CarEndpoints[F[_] : Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
           .orElse(findCarByCarNumberEndpoint(carService))
 
       val onlyAdmin = deleteCarEndpoint(carService)
+        .orElse(findOwnerByCarId(carService, userService))
 
       Auth.allRolesHandler(allRoles)(Auth.adminOnly(onlyAdmin))
     }
@@ -96,6 +110,7 @@ class CarEndpoints[F[_] : Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
 
 object CarEndpoints {
   def endpoints[F[_] : Sync, Auth: JWTMacAlgo](carService: CarService[F],
+                                               userService: UserService[F],
                                                auth: SecuredRequestHandler[F, Long, User, AugmentedJWT[Auth, Long]]): HttpRoutes[F] =
-    new CarEndpoints[F, Auth].endpoints(carService, auth)
+    new CarEndpoints[F, Auth].endpoints(carService, userService, auth)
 }

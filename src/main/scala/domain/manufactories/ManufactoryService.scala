@@ -1,8 +1,8 @@
 package domain.manufactories
 
+import cats.syntax.all._
 import cats.{Functor, Monad}
 import cats.data.EitherT
-import cats.implicits._
 import domain.{ManufactoryAlreadyExistsError, ManufactoryNotFoundError}
 
 class ManufactoryService[F[_]](repository: ManufactoryRepositoryAlgebra[F]) {
@@ -23,6 +23,24 @@ class ManufactoryService[F[_]](repository: ManufactoryRepositoryAlgebra[F]) {
   /* In some circumstances we may care if we actually delete the pet; here we are idempotent and do not care */
   def delete(id: Long)(implicit F: Functor[F]): F[Unit] =
     repository.delete(id).as(())
+
+  def findByStatus(status: ManufactoryStatus): F[Option[Manufactory]] =
+    repository.findByStatus(status)
+
+  def updateStatus(status: ManufactoryStatus)(implicit M: Monad[F]): F[Unit] = {
+    for {
+      manufactory <- findByStatus(status).flatMap {
+      case Some(x) => x.copy(status = ManufactoryStatus.NotAvailable).some.pure[F]
+    }
+      _ <- update(manufactory.get).pure[F]
+    } yield()
+  }
+
+  def getIdByStatus(status: ManufactoryStatus)(implicit M: Monad[F]): F[Long] = {
+    findByStatus(status).flatMap {
+      case Some(manufactory) => manufactory.id.get.pure[F]
+    }
+  }
 }
 
 object ManufactoryService {

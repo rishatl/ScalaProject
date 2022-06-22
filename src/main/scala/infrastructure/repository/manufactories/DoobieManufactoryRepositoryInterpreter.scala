@@ -27,6 +27,9 @@ class DoobieManufactoryRepositoryInterpreter[F[_]: Bracket[*[_], Throwable]](val
 
   def delete(id: Long): F[Option[Manufactory]] =
     OptionT(select(id).option).semiflatMap(pet => ManufactorySQL.delete(id).run.as(pet)).value.transact(xa)
+
+  def findByStatus(status: ManufactoryStatus): F[Option[Manufactory]] =
+    selectByStatus(status).option.transact(xa)
 }
 
 object DoobieManufactoryRepositoryInterpreter {

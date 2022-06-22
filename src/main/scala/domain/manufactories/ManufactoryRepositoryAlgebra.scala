@@ -8,4 +8,6 @@ trait ManufactoryRepositoryAlgebra[F[_]] {
   def get(id: Long): F[Option[Manufactory]]
 
   def delete(id: Long): F[Option[Manufactory]]
+
+  def findByStatus(status: ManufactoryStatus): F[Option[Manufactory]]
 }

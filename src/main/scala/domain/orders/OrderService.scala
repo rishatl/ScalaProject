@@ -6,7 +6,7 @@ import cats.syntax.all._
 import domain._
 
 class OrderService[F[_]](orderRepo: OrderRepositoryAlgebra[F]) {
-  def placeOrder(order: Order): F[Order] =
+  def createOrder(order: Order): F[Order] =
     orderRepo.create(order)
 
   def get(id: Long)(implicit F: Functor[F]): EitherT[F, OrderNotFoundError.type, Order] =
